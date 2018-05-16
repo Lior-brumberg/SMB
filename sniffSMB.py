@@ -66,7 +66,8 @@ def packet_handler(pkt):
     if next_command != '00000000':
         print 'Cannot deal with compound command!'
         return
-
+    
+    command = COMMAND_DICT[command]
     getattr(smb_commands, command)()
 
 
