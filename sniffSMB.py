@@ -1,14 +1,29 @@
 # -*- coding: utf-8 -*-
 from scapy.all import *
-import smb_commands
 
 COMMAND_BUFFER = 20
 COMMAND_SIZE = 2
+
 FLAGS_BUFFER = 24
 FLAGS_SIZE = 4
+
 NEXT_COMMAND_BUFFER = 28
 NEXT_COMMAND_SIZE = 4
+
 ASYNC_FLAG_BUFFER = 1
+
+SMB_HEADER_BUFFER = 64
+SESSION_SETUP_BUFFER = 24
+
+DOMAIN_NAME_LENGTH_SETUP_BUFFER = 28
+DOMAIN_NAME_LENGTH_SETUP_LENGTH = 4
+DOMAIN_NAME_OFFSET_SETUP_BUFFER = 36
+DOMAIN_NAME_OFFSET_SETUP_LENGTH = 8
+
+USERNAME_LENGTH_SETUP_BUFFER = 44
+USERNAME_LENGTH_SETUP_LENGTH = 4
+USERNAME_OFFSET_SETUP_BUFFER = 52
+USERNAME_OFFSET_SETUP_LENGTH = 8
 
 COMMANDS_DICT = {
     '0000': 'negotiate',
@@ -31,6 +46,47 @@ COMMANDS_DICT = {
     '0011': 'set_info',
     '0012': 'oplock_break',
 }
+
+
+def swap_endian(l):
+    swapped = []
+    for i in range(0, len(l), 2):
+        swapped.insert(0, l[i:i+2])
+
+    return ''.join(swapped)
+
+
+def session_setup(st):
+    st = st[SMB_HEADER_BUFFER + SESSION_SETUP_BUFFER:]
+    try:
+        index = st.index('4e544c4d53535000')
+        st = st[index:]
+
+    except ValueError:
+        print "Not NTLMSSP"
+        return
+
+    domain_lngth = st[DOMAIN_NAME_LENGTH_SETUP_BUFFER:DOMAIN_NAME_LENGTH_SETUP_BUFFER + DOMAIN_NAME_LENGTH_SETUP_LENGTH]
+    domain_lngth = swap_endian(domain_lngth)
+    domain_lngth = int(domain_lngth, 16)
+
+    domain_offset = st[DOMAIN_NAME_OFFSET_SETUP_BUFFER:DOMAIN_NAME_OFFSET_SETUP_BUFFER+DOMAIN_NAME_OFFSET_SETUP_LENGTH]
+    domain_offset = swap_endian(domain_offset, 16)
+    domain_offset = int(domain_offset, 16)
+    
+    domain_name = st[domain_offset:domain_offset + domain_lngth]
+
+    username_lngth = st[DOMAIN_NAME_LENGTH_SETUP_BUFFER:DOMAIN_NAME_LENGTH_SETUP_BUFFER + DOMAIN_NAME_LENGTH_SETUP_LENGTH]
+    username_lngth = swap_endian(username_lngth)
+    username_lngth = int(username_lngth, 16)
+
+    username_offset = st[DOMAIN_NAME_OFFSET_SETUP_BUFFER:DOMAIN_NAME_OFFSET_SETUP_BUFFER+DOMAIN_NAME_OFFSET_SETUP_LENGTH]
+    username_offset = swap_endian(username_offset, 16)
+    username_offset = int(username_offset, 16)
+
+    username = st[username_offset:username_offset + username_lngth]
+
+    print "domain name: {0}\nname: {1}".format(domain_name, username)
 
 
 def get_hex_string(s):
@@ -66,9 +122,10 @@ def packet_handler(pkt):
     if next_command != '00000000':
         print 'Cannot deal with compound command!'
         return
-    
-    command = COMMAND_DICT[command]
-    getattr(smb_commands, command)()
+
+    ##getattr(smb_commands, command)(pkt) for later use
+    if command == 'session_setup':
+        session_setup(hex_s)
 
 
 def main():
