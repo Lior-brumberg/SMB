@@ -2,13 +2,14 @@
 
 import sqlite3 as sql
 
-#general class for database creation
+
+# general class for database creation
 class Database(object):
     def __init__(self, name):
-        self.conn = sql.connect(name)
+        self.conn = sql.connect(name + ".db")
         self.database_instence = self.conn.cursor()
 
-    def create_table(self, columns_dictionary, table_name):
+    def create_table(self, table_name, columns_dictionary):
         self.database_instence.execute("create table " + table_name + " (" + columns_dictionary + " );")
         self.conn.commit()
 
@@ -25,8 +26,9 @@ class Database(object):
         data = self.database_instence.fetchone()
         return data
 
-#example
-d = Database("TAL")
-d.create_table("name string, marvel fan string, anime string", "Itzhaky")
-d.insert_data("Itzhaky", "name, marvel, anime", "'shon', 'dudu faruk', 'robert'")
-print d.Display_all("Itzhaky")
+# example
+
+#d = Database("TAL")
+#d.create_table("name string, marvel fan string, anime string", "Itzhaky")
+#d.insert_data("Itzhaky", "name, marvel, anime", "'shon', 'dudu faruk', 'robert'")
+
