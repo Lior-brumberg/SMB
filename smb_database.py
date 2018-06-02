@@ -12,6 +12,8 @@ def check_ip(ip):
     x = True
     if '.' in ip:
         ip = ip.split(".")
+        if len(ip) != 4:
+            return False
         try:
             for byte in ip:
                 x = x and (0 <= int(byte) <= 255)
@@ -59,8 +61,8 @@ def Handle_request():
     ErrorFrame.destroy()
     ErrorFrame = Frame(root)
     ErrorFrame.pack(side=RIGHT)
-    SuccessLabel = Label(ErrorFrame, text="USER successfully added", fg='black')
-    SuccessLabel.pack()
+    SuccessLabel = Label(ErrorFrame, text="USER successfully added", fg='black', justify=LEFT)
+    SuccessLabel.pack(side=TOP)
     clear_fields()
 
 
@@ -82,16 +84,16 @@ def add_user(event):
         ErrorFrame.destroy()
         ErrorFrame = Frame(root)
         ErrorFrame.pack(side=RIGHT)
-        ErrorLabel = Label(ErrorFrame, text='ERROR: Only one checkbox can be checked\n User was not added.', fg='black')
-        ErrorLabel.pack()
+        ErrorLabel = Label(ErrorFrame, text='ERROR: Only one checkbox can be checked\n User was not added.', fg='black', justify=LEFT)
+        ErrorLabel.pack(side=TOP)
         clear_fields()
         return
     elif on_counter == 0:
         ErrorFrame.destroy()
         ErrorFrame = Frame(root)
         ErrorFrame.pack(side=RIGHT)
-        ErrorLabel = Label(ErrorFrame, text="ERROR: One checbox must be checked\n User was not added", fg='black')
-        ErrorLabel.pack()
+        ErrorLabel = Label(ErrorFrame, text="ERROR: One checbox must be checked\n User was not added", fg='black', justify=LEFT)
+        ErrorLabel.pack(side=TOP)
         clear_fields()
         return
 
@@ -101,18 +103,26 @@ def add_user(event):
         ErrorFrame.destroy()
         ErrorFrame = Frame(root)
         ErrorFrame.pack(side=RIGHT)
-        ErrorLabel = Label(ErrorFrame, text="ERROR: IP incorrect\n User was not added", fg='black')
-        ErrorLabel.pack()
+        ErrorLabel = Label(ErrorFrame, text="ERROR: IP incorrect\n User was not added", fg='black', justify=LEFT)
+        ErrorLabel.pack(side=TOP)
         clear_fields()
         return
 
 
 
 root = Tk()
+
+imageframe = Frame(root)
+imageframe.pack(side=TOP)
+imgPath = r"hsk.gif"
+photo = PhotoImage(file = imgPath)
+backlabel = Label(imageframe, image = photo, padx=0, pady=0)
+backlabel.pack(side=LEFT)
+
 ErrorFrame = Frame(root)
 ErrorFrame.pack(side=RIGHT)
 DATAFrame = Frame(root)
-DATAFrame.pack(side=LEFT)
+DATAFrame.pack(side=LEFT, fill = BOTH)
 
 RO_var = IntVar()
 WO_var = IntVar()
@@ -139,4 +149,5 @@ SubmitButton = Button(DATAFrame, text='submit')
 SubmitButton.bind("<Button-1>", add_user)
 SubmitButton.grid(row=3, column=0, columnspan=2)
 
+root.resizable(width=False, height=False)
 root.mainloop()
