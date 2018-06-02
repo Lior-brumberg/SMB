@@ -1,0 +1,142 @@
+from database import Database
+from Tkinter import *
+
+global User_database
+global IPentry
+
+User_database = Database("FAKE_DRIVB_DB")
+User_database.create_table("Users", "IP string, Authorization string")
+
+
+def check_ip(ip):
+    x = True
+    if '.' in ip:
+        ip = ip.split(".")
+        try:
+            for byte in ip:
+                x = x and (0 <= int(byte) <= 255)
+        except ValueError:
+            x = False
+    else:
+        x = False
+    return x
+
+
+def clear_fields():
+    global IPentry
+    global Ro_checlbox
+    global Wo_checlbox
+    global ALL_checlbox
+    global NONE_checlbox
+
+    Ro_checlbox.deselect()
+    Wo_checlbox.deselect()
+    ALL_checlbox.deselect()
+    NONE_checlbox.deselect()
+    IPentry.delete(0, 'end')
+
+
+def Handle_request():
+    global ErrorFrame
+    global IPentry
+    global RO_var
+    global WO_var
+    global ALL_var
+    global NONE_var
+    global User_database
+    clearence = 0
+
+    if RO_var.get() == 1:
+        clearence = 1
+    elif WO_var.get() == 1:
+        clearence = 2
+    elif ALL_var.get() == 1:
+        clearence = 3
+    elif NONE_var.get() == 1:
+        clearence = -1
+    User_database.insert_data("Users", "IP, Authorization", "\'" + IPentry.get() + "\', \'" + str(clearence) + "\'")
+
+    ErrorFrame.destroy()
+    ErrorFrame = Frame(root)
+    ErrorFrame.pack(side=RIGHT)
+    SuccessLabel = Label(ErrorFrame, text="USER successfully added", fg='black')
+    SuccessLabel.pack()
+    clear_fields()
+
+
+def add_user(event):
+    global root
+    global ErrorFrame
+    global IPentry
+    global RO_var
+    global WO_var
+    global ALL_var
+    global NONE_var
+
+    on_counter = 0
+    on_counter += RO_var.get()
+    on_counter += WO_var.get()
+    on_counter += ALL_var.get()
+    on_counter += NONE_var.get()
+    if on_counter > 1:
+        ErrorFrame.destroy()
+        ErrorFrame = Frame(root)
+        ErrorFrame.pack(side=RIGHT)
+        ErrorLabel = Label(ErrorFrame, text='ERROR: Only one checkbox can be checked\n User was not added.', fg='black')
+        ErrorLabel.pack()
+        clear_fields()
+        return
+    elif on_counter == 0:
+        ErrorFrame.destroy()
+        ErrorFrame = Frame(root)
+        ErrorFrame.pack(side=RIGHT)
+        ErrorLabel = Label(ErrorFrame, text="ERROR: One checbox must be checked\n User was not added", fg='black')
+        ErrorLabel.pack()
+        clear_fields()
+        return
+
+    if check_ip(IPentry.get()):
+        Handle_request()
+    else:
+        ErrorFrame.destroy()
+        ErrorFrame = Frame(root)
+        ErrorFrame.pack(side=RIGHT)
+        ErrorLabel = Label(ErrorFrame, text="ERROR: IP incorrect\n User was not added", fg='black')
+        ErrorLabel.pack()
+        clear_fields()
+        return
+
+
+
+root = Tk()
+ErrorFrame = Frame(root)
+ErrorFrame.pack(side=RIGHT)
+DATAFrame = Frame(root)
+DATAFrame.pack(side=LEFT)
+
+RO_var = IntVar()
+WO_var = IntVar()
+ALL_var = IntVar()
+NONE_var = IntVar()
+
+IPentry = Entry(DATAFrame)
+IPlable = Label(DATAFrame, text='Enter IP:')
+
+IPlable.grid(column=0, sticky=W)
+IPentry.grid(column=1, row=0)
+
+Ro_checlbox = Checkbutton(DATAFrame, text='READ_ONLY', variable=RO_var)
+Wo_checlbox = Checkbutton(DATAFrame, text='WRITE_ONLY', variable=WO_var)
+ALL_checlbox = Checkbutton(DATAFrame, text='ALL(READ_WRITE_ANDDELETE)', variable=ALL_var)
+NONE_checlbox = Checkbutton(DATAFrame, text='NONE', variable=NONE_var)
+
+Ro_checlbox.grid(row=1, column=0)
+Wo_checlbox.grid(row=2, column=0)
+ALL_checlbox.grid(row=1, column=1)
+NONE_checlbox.grid(row=2, column=1, sticky=W)
+
+SubmitButton = Button(DATAFrame, text='submit')
+SubmitButton.bind("<Button-1>", add_user)
+SubmitButton.grid(row=3, column=0, columnspan=2)
+
+root.mainloop()
