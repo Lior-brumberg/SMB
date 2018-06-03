@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 from scapy.all import *
+import logging
 
-COMMAND_BUFFER = 20
+COMMAND_BUFFER = 12
 COMMAND_SIZE = 2
 
-FLAGS_BUFFER = 24
+FLAGS_BUFFER = 16
 FLAGS_SIZE = 4
 
-NEXT_COMMAND_BUFFER = 28
+NEXT_COMMAND_BUFFER = 20
 NEXT_COMMAND_SIZE = 4
 
 ASYNC_FLAG_BUFFER = 1
@@ -88,11 +89,7 @@ def session_setup(st):
 
     print "domain name: {0}\nname: {1}".format(domain_name, username)
 
-
-def get_hex_string(s):
-    to_hex = lambda x: "".join((hex(ord(c))[2:].zfill(2) for c in x))
-    hex_s = to_hex(s)
-    return hex_s
+to_hex = lambda x: "".join((hex(ord(c))[2:].zfill(2) for c in x))
 
 
 def filter_smb(pkt):
@@ -100,8 +97,8 @@ def filter_smb(pkt):
     Filters received packets, only SMB packets can pass this selection
     """
     try:
-        raw_string = pkt[Raw]
-        hex_s = get_hex_string(raw_string)
+        raw_string = str(pkt[Raw])
+        hex_s = to_hex(raw_string)
         return hex_s.startswith('fe534d42')
 
     except IndexError:
@@ -109,10 +106,12 @@ def filter_smb(pkt):
 
 
 def packet_handler(pkt):
-    raw_string = pkt[Raw]
-    hex_s = get_hex_string(raw_string)
+    raw_string = str(pkt[Raw])
+    hex_s = to_hex(raw_string)
     command = hex_s[COMMAND_BUFFER:COMMAND_BUFFER + COMMAND_SIZE]
-
+    command = COMMANDS_DICT[command]
+    logging.debug(command)
+    
     flags = hex_s[FLAGS_BUFFER:FLAGS_BUFFER + FLAGS_SIZE]
     if flags[ASYNC_FLAG_BUFFER] == '1':
         print 'Cannot deal with async SMB!'
@@ -132,6 +131,7 @@ def main():
     """
     Add Documentation here
     """
+    logging.basicConfig(filename='example.log',level=logging.DEBUG)
     sniff(count=0, lfilter=filter_smb, store=0, prn=packet_handler)
 
 if __name__ == '__main__':
