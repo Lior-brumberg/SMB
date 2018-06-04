@@ -10,8 +10,11 @@ class Database(object):
         self.database_instence = self.conn.cursor()
 
     def create_table(self, table_name, columns_dictionary):
-        self.database_instence.execute("create table " + table_name + " (" + columns_dictionary + " );")
-        self.conn.commit()
+        try:
+            self.database_instence.execute("create table " + table_name + " (" + columns_dictionary + " );")
+            self.conn.commit()
+        except sql.OperationalError:
+            print "{0} already exists".format(table_name)
 
     def insert_data(self, table, columns, data):
         self.database_instence.execute("INSERT INTO " + table + " (" + columns + ") VALUES (" + data + " );")
@@ -23,12 +26,13 @@ class Database(object):
 
     def Display_all(self, table):
         self.database_instence.execute("SELECT * FROM " + table)
-        data = self.database_instence.fetchone()
+        data = self.database_instence.fetchall()
         return data
-
 # example
 
 #d = Database("TAL")
 #d.create_table("name string, marvel fan string, anime string", "Itzhaky")
 #d.insert_data("Itzhaky", "name, marvel, anime", "'shon', 'dudu faruk', 'robert'")
 
+a = Database('FAKE_DRIVB_DB')
+data = a.Display_all('Users')
