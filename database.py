@@ -26,6 +26,10 @@ class Database(object):
         data = self.database_instence.fetchone()
         return data
 
+    def check_if_there(self, table, column, value):
+         x = self.database_instence.execute("SELECT IP from Users where EXISTS ( SELECT 1 FROM %s WHERE %s == '%s')" %(table, column, value))
+         return x
+
 # example
 
 #d = Database("TAL")
