@@ -1,35 +1,97 @@
 # -*- coding: utf-8 -*-
-def create():
-    pass
+from scapy.all import *
+from database import Database
+
+SMB_HEADER_BUFFER = 64
+SESSION_SETUP_BUFFER = 24
+
+DOMAIN_NAME_LENGTH_SETUP_BUFFER = 28
+DOMAIN_NAME_LENGTH_SETUP_LENGTH = 4
+DOMAIN_NAME_OFFSET_SETUP_BUFFER = 36
+DOMAIN_NAME_OFFSET_SETUP_LENGTH = 8
+
+USERNAME_LENGTH_SETUP_BUFFER = 44
+USERNAME_LENGTH_SETUP_LENGTH = 4
+USERNAME_OFFSET_SETUP_BUFFER = 52
+USERNAME_OFFSET_SETUP_LENGTH = 8
+
+to_hex = lambda x: "".join((hex(ord(c))[2:].zfill(2) for c in x))
 
 
-def close():
-    pass
+def get_authorization(ip):
+    db = Database("FAKE_DRIVB_DB")
+    data = db.Display_all('Users')
+    for row in data:
+        if ip == row[0]:
+            return row[1]
+    print ip + "isn\'t in database. Inserting to database..."
+    db.insert_data("Users", "IP, Authorization", "\'" + ip + "\', \'" + "-1" + "\'")
+    return '-1'
 
 
-def ioctl():
-    pass
+def swap_endian(l):
+    swapped = []
+    for i in range(0, len(l), 2):
+        swapped.insert(0, l[i:i+2])
+
+    return ''.join(swapped)
 
 
-def cancel():
-    pass
+def create(pkt):
+    ipsrc = pkt[IP].src
+    auth = get_authorization(ipsrc)
+    if auth < 3:
+        pass
 
 
-def query_directory():
-    pass
+def read(pkt):
+    ipsrc = pkt[IP].src
+    auth = get_authorization(ipsrc)
+    if auth < 1:
+        return ipsrc
+    else:
+        return False
 
 
-def change_notify():
-    pass
+def write(pkt):
+    ipsrc = pkt[IP].src
+    auth = get_authorization(ipsrc)
+    if auth < 2:
+        return ipsrc
+    else:
+        return False
 
+def session_setup(pkt):
+    raw_string = str(pkt[Raw])
+    st = to_hex(raw_string)
+    st = st[SMB_HEADER_BUFFER + SESSION_SETUP_BUFFER:]
+    try:
+        index = st.index('4e544c4d53535000')
+        st = st[index:]
 
-def query_info():
-    pass
+    except ValueError:
+        print "Not NTLMSSP"
+        return
 
+    domain_lngth = st[DOMAIN_NAME_LENGTH_SETUP_BUFFER:DOMAIN_NAME_LENGTH_SETUP_BUFFER + DOMAIN_NAME_LENGTH_SETUP_LENGTH]
+    domain_lngth = swap_endian(domain_lngth)
+    domain_lngth = int(domain_lngth, 16)
 
-def set_info():
-    pass
+    domain_offset = st[DOMAIN_NAME_OFFSET_SETUP_BUFFER:DOMAIN_NAME_OFFSET_SETUP_BUFFER+DOMAIN_NAME_OFFSET_SETUP_LENGTH]
+    domain_offset = swap_endian(domain_offset, 16)
+    domain_offset = int(domain_offset, 16)
 
+    domain_name = st[domain_offset:domain_offset + domain_lngth]
 
-def oplock_break():
-    pass
+    username_lngth = st[DOMAIN_NAME_LENGTH_SETUP_BUFFER:DOMAIN_NAME_LENGTH_SETUP_BUFFER + DOMAIN_NAME_LENGTH_SETUP_LENGTH]
+    username_lngth = swap_endian(username_lngth)
+    username_lngth = int(username_lngth, 16)
+
+    username_offset = st[DOMAIN_NAME_OFFSET_SETUP_BUFFER:DOMAIN_NAME_OFFSET_SETUP_BUFFER+DOMAIN_NAME_OFFSET_SETUP_LENGTH]
+    username_offset = swap_endian(username_offset, 16)
+    username_offset = int(username_offset, 16)
+
+    username = st[username_offset:username_offset + username_lngth]
+
+    print "domain name: {0}\tname: {1}\nHas logged in.".format(domain_name, username)
+    return None

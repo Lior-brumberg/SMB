@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 from scapy.all import *
 import logging
+import smb_commands
+import subprocess
+import sys
+import getopt
+import os
+import SMBserver
+import thread
 
 COMMAND_BUFFER = 12
 COMMAND_SIZE = 2
@@ -49,47 +56,15 @@ COMMANDS_DICT = {
 }
 
 
-def swap_endian(l):
-    swapped = []
-    for i in range(0, len(l), 2):
-        swapped.insert(0, l[i:i+2])
-
-    return ''.join(swapped)
-
-
-def session_setup(st):
-    st = st[SMB_HEADER_BUFFER + SESSION_SETUP_BUFFER:]
-    try:
-        index = st.index('4e544c4d53535000')
-        st = st[index:]
-
-    except ValueError:
-        print "Not NTLMSSP"
-        return
-
-    domain_lngth = st[DOMAIN_NAME_LENGTH_SETUP_BUFFER:DOMAIN_NAME_LENGTH_SETUP_BUFFER + DOMAIN_NAME_LENGTH_SETUP_LENGTH]
-    domain_lngth = swap_endian(domain_lngth)
-    domain_lngth = int(domain_lngth, 16)
-
-    domain_offset = st[DOMAIN_NAME_OFFSET_SETUP_BUFFER:DOMAIN_NAME_OFFSET_SETUP_BUFFER+DOMAIN_NAME_OFFSET_SETUP_LENGTH]
-    domain_offset = swap_endian(domain_offset, 16)
-    domain_offset = int(domain_offset, 16)
-    
-    domain_name = st[domain_offset:domain_offset + domain_lngth]
-
-    username_lngth = st[DOMAIN_NAME_LENGTH_SETUP_BUFFER:DOMAIN_NAME_LENGTH_SETUP_BUFFER + DOMAIN_NAME_LENGTH_SETUP_LENGTH]
-    username_lngth = swap_endian(username_lngth)
-    username_lngth = int(username_lngth, 16)
-
-    username_offset = st[DOMAIN_NAME_OFFSET_SETUP_BUFFER:DOMAIN_NAME_OFFSET_SETUP_BUFFER+DOMAIN_NAME_OFFSET_SETUP_LENGTH]
-    username_offset = swap_endian(username_offset, 16)
-    username_offset = int(username_offset, 16)
-
-    username = st[username_offset:username_offset + username_lngth]
-
-    print "domain name: {0}\nname: {1}".format(domain_name, username)
-
 to_hex = lambda x: "".join((hex(ord(c))[2:].zfill(2) for c in x))
+def get_server_from_letter(letter):
+    output = subprocess.check_output(['net', 'use'], shell=True)
+    output = ''.join(st.split())
+    st = output.index(letter)
+    output = output[st+4:]
+    end = output.index('\\')
+    server = output[:end]
+    return server
 
 
 def filter_smb(pkt):
@@ -122,17 +97,60 @@ def packet_handler(pkt):
         print 'Cannot deal with compound command!'
         return
 
-    ##getattr(smb_commands, command)(pkt) for later use
-    if command == 'session_setup':
-        session_setup(hex_s)
+    args = [pkt]
+    try:
+        toClose = getattr(smb_commands, command)(*args)
+        if toClose:
+            pids = SMBserver.get_new_process()
+            
+    except AttributeError:
+        print 'We do not support {0} command yet'.format(command)
 
 
-def main():
+def main(argv):
     """
     Add Documentation here
     """
-    logging.basicConfig(filename='example.log',level=logging.DEBUG)
+    dir_letter = ''
+    try:
+        opts, arguments = getopt.getopt(argv, "hp:")
+    except getopt.GetoptError:
+        print 'Usage: sniffSMB.py -p <shared_dir_letter>'
+        sys.exit(2)
+
+    if not opts:
+        print 'Usage: sniffSMB.py -p <shared_dir_letter>'
+        sys.exit()
+
+    for opt, arg in opts:
+        if opt == '-h':
+            print 'Usage: sniffSMB.py -p <shared_dir_letter>'
+            sys.exit()
+        elif opt == '-p':
+            dir_letter = arg
+            if ':' not in dir_letter:
+                dir_letter += ':'
+                
+            if not os.path.exists(dir_letter):
+                print 'No such directory found.'
+                sys.exit()
+            elif dir_path.startswith('C:'):
+                print 'Not a shared directory.'
+                sys.exit()
+
+    server = get_server_from_letter(dir_letter)
+    SMBserver.init_server()
+    thread.start_new_thread(listen_to_sockets, (server))
+    logging.basicConfig(filename='smb.log', level=logging.DEBUG)
     sniff(count=0, lfilter=filter_smb, store=0, prn=packet_handler)
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) < 2 or len(sys.argv) > 3:
+        print "Usage: sniffSMB.py -p <shared_dir_letter>"
+        sys.exit()
+    main(sys.argv[1:])
+
+
+#fn = 'c:\\file.txt'
+#p = os.popen('attrib +h ' + fn)
+#p.close()
