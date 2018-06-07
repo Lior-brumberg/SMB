@@ -57,6 +57,8 @@ COMMANDS_DICT = {
 
 
 to_hex = lambda x: "".join((hex(ord(c))[2:].zfill(2) for c in x))
+
+
 def get_server_from_letter(letter):
     output = subprocess.check_output(['net', 'use'], shell=True)
     output = ''.join(st.split())
@@ -79,32 +81,36 @@ def filter_smb(pkt):
     except IndexError:
         return False
 
+def wrapper(server):
+    def packet_handler(pkt):
+        raw_string = str(pkt[Raw])
+        hex_s = to_hex(raw_string)
+        command = hex_s[COMMAND_BUFFER:COMMAND_BUFFER + COMMAND_SIZE]
+        command = COMMANDS_DICT[command]
+        logging.debug(command)
+        
+        flags = hex_s[FLAGS_BUFFER:FLAGS_BUFFER + FLAGS_SIZE]
+        if flags[ASYNC_FLAG_BUFFER] == '1':
+            print 'Cannot deal with async SMB!'
+            return
 
-def packet_handler(pkt):
-    raw_string = str(pkt[Raw])
-    hex_s = to_hex(raw_string)
-    command = hex_s[COMMAND_BUFFER:COMMAND_BUFFER + COMMAND_SIZE]
-    command = COMMANDS_DICT[command]
-    logging.debug(command)
-    
-    flags = hex_s[FLAGS_BUFFER:FLAGS_BUFFER + FLAGS_SIZE]
-    if flags[ASYNC_FLAG_BUFFER] == '1':
-        print 'Cannot deal with async SMB!'
-        return
+        next_command = hex_s[NEXT_COMMAND_BUFFER:NEXT_COMMAND_BUFFER + NEXT_COMMAND_SIZE]
+        if next_command != '00000000':
+            print 'Cannot deal with compound command!'
+            return
 
-    next_command = hex_s[NEXT_COMMAND_BUFFER:NEXT_COMMAND_BUFFER + NEXT_COMMAND_SIZE]
-    if next_command != '00000000':
-        print 'Cannot deal with compound command!'
-        return
+        args = [pkt]
+        try:
+            toClose = getattr(smb_commands, command)(*args)
+            if toClose:
+                logging.debug("{0} Has tried to commit {1}.".format(toClose, command))
+                pids = SMBserver.get_new_process(toClose, server)
+                SMBserver.close_processes(toClose, pids)
+                
+        except AttributeError:
+            print 'We do not support {0} command yet'.format(command)
 
-    args = [pkt]
-    try:
-        toClose = getattr(smb_commands, command)(*args)
-        if toClose:
-            pids = SMBserver.get_new_process()
-            
-    except AttributeError:
-        print 'We do not support {0} command yet'.format(command)
+    return packet_handler
 
 
 def main(argv):
@@ -142,7 +148,7 @@ def main(argv):
     SMBserver.init_server()
     thread.start_new_thread(listen_to_sockets, (server))
     logging.basicConfig(filename='smb.log', level=logging.DEBUG)
-    sniff(count=0, lfilter=filter_smb, store=0, prn=packet_handler)
+    sniff(count=0, lfilter=filter_smb, store=0, prn=wrapper(server))
 
 if __name__ == '__main__':
     if len(sys.argv) < 2 or len(sys.argv) > 3:

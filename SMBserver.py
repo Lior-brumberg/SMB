@@ -6,9 +6,9 @@ import thread
 DATA_BYTES = 64
 PORT = 5555
 CLIENT_SOCKETS = {}
+server_socket = socket.socket()
 
 def init_server():
-    server_socket = socket.socket()
     server_socket.bind(('0.0.0.0', PORT))
     server_socket.listen(5)
     

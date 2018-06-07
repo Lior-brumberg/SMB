@@ -15,6 +15,13 @@ USERNAME_LENGTH_SETUP_LENGTH = 4
 USERNAME_OFFSET_SETUP_BUFFER = 52
 USERNAME_OFFSET_SETUP_LENGTH = 8
 
+CREATE_FLAGS_BUFFER = 24
+CREATE_FLAGS_SIZE = 4
+
+READ_FLAG_INDEX = -1
+WRITE_FLAG_INDEX = -2
+DELETE_FLAG_INDEX = -17
+
 to_hex = lambda x: "".join((hex(ord(c))[2:].zfill(2) for c in x))
 
 
@@ -40,9 +47,28 @@ def swap_endian(l):
 def create(pkt):
     ipsrc = pkt[IP].src
     auth = get_authorization(ipsrc)
-    if auth < 3:
-        pass
+    raw_string = str(pkt[Raw])
+    hex_s = to_hex(raw_string)
+    hex_s = swap_endian(hex_s)
+    bin_s = bin(int(hex_s, 16))[2:].zfill(4*len(hex_s))
+    if auth == 3:
+        return False
+    else:
+        if bin_s[DELETE_FLAG_INDEX]:
+            return ipsrc
 
+        elif bin_s[WRITE_FLAG_INDEX]:
+            if auth < 2:
+                return ipsrc
+            else:
+                return False
+            
+        elif bin_s[READ_FLAG_INDEX]:
+            if auth < 1:
+                return ipsrc
+            else:
+                return False
+    
 
 def read(pkt):
     ipsrc = pkt[IP].src
