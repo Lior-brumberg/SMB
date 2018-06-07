@@ -1,7 +1,8 @@
 from database import Database
 from Tkinter import *
-import os, sqlite3
+import sqlite3
 import tkMessageBox
+
 
 global User_database
 global IPentry
@@ -12,9 +13,11 @@ try:
 except sqlite3.OperationalError:
     pass
 
+
 def input_new():
     User_database.delete_by_column("Users", "IP", IPentry.get())
     add_user(event=1)
+
 
 def check_ip(ip):
     x = True
@@ -66,7 +69,8 @@ def Handle_request():
         clearence = -1
     print User_database.get_by_column("Users", "IP", '\'' + IPentry.get() + '\'').fetchall()
     if User_database.get_by_column("Users", "IP", '\'' + IPentry.get() + '\'').fetchall():
-        result = tkMessageBox.askyesno("Duplicate error", "That user is already in our database\n do you want to override?")
+        result = tkMessageBox.askyesno("Duplicate error",
+                                       "That user is already in our database\n do you want to override?")
         if result == 'yes':
             input_new()
     else:
@@ -167,7 +171,7 @@ IPentry.grid(column=1, row=0)
 
 Ro_checlbox = Checkbutton(DATAFrame, text='READ_ONLY', variable=RO_var)
 Wo_checlbox = Checkbutton(DATAFrame, text='WRITE_ONLY', variable=WO_var)
-ALL_checlbox = Checkbutton(DATAFrame, text='ALL(READ_WRITE_ANDDELETE)', variable=ALL_var)
+ALL_checlbox = Checkbutton(DATAFrame, text='ALL(READ WRITE AND DELETE)', variable=ALL_var)
 NONE_checlbox = Checkbutton(DATAFrame, text='NONE', variable=NONE_var)
 
 Ro_checlbox.grid(row=1, column=0)
