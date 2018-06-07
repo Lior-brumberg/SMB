@@ -1,12 +1,20 @@
 from database import Database
 from Tkinter import *
+import os, sqlite3
+import tkMessageBox
 
 global User_database
 global IPentry
 
-User_database = Database("FAKE_DRIVB_DB")
-User_database.create_table("Users", "IP string, Authorization string")
+try:
+    User_database = Database("FAKE_DRIVB_DB")
+    User_database.create_table("Users", "IP string, Authorization string")
+except sqlite3.OperationalError:
+    pass
 
+def input_new():
+    User_database.delete_by_column("Users", "IP", IPentry.get())
+    add_user(event=1)
 
 def check_ip(ip):
     x = True
@@ -56,13 +64,22 @@ def Handle_request():
         clearence = 3
     elif NONE_var.get() == 1:
         clearence = -1
-    User_database.insert_data("Users", "IP, Authorization", "\'" + IPentry.get() + "\', \'" + str(clearence) + "\'")
+    print User_database.get_by_column("Users", "IP", '\'' + IPentry.get() + '\'').fetchall()
+    if User_database.get_by_column("Users", "IP", '\'' + IPentry.get() + '\'').fetchall():
+        result = tkMessageBox.askyesno("Duplicate error", "That user is already in our database\n do you want to override?")
+        if result == 'yes':
+            input_new()
+    else:
+        User_database.insert_data("Users", "IP, Authorization", "\'" + IPentry.get() + "\', \'" + str(clearence) + "\'")
 
     ErrorFrame.destroy()
     ErrorFrame = Frame(root)
     ErrorFrame.pack(side=RIGHT)
     SuccessLabel = Label(ErrorFrame, text="USER successfully added", fg='black', justify=LEFT)
     SuccessLabel.pack(side=TOP)
+    new_img = PhotoImage(file='hsk.gif')
+    backlabel.configure(image=new_img)
+    backlabel.image = new_img
     clear_fields()
 
 
@@ -74,6 +91,8 @@ def add_user(event):
     global WO_var
     global ALL_var
     global NONE_var
+    global photo
+    global backlabel
 
     on_counter = 0
     on_counter += RO_var.get()
@@ -84,16 +103,25 @@ def add_user(event):
         ErrorFrame.destroy()
         ErrorFrame = Frame(root)
         ErrorFrame.pack(side=RIGHT)
-        ErrorLabel = Label(ErrorFrame, text='ERROR: Only one checkbox can be checked\n User was not added.', fg='black', justify=LEFT)
+        ErrorLabel = Label(ErrorFrame, text='ERROR: Only one checkbox can be checked\n User was not added.', fg='black',
+                           justify=LEFT)
         ErrorLabel.pack(side=TOP)
+        new_img = PhotoImage(file='homer.gif')
+        backlabel.configure(image=new_img)
+        backlabel.image = new_img
+        backlabel.update()
         clear_fields()
         return
     elif on_counter == 0:
         ErrorFrame.destroy()
         ErrorFrame = Frame(root)
         ErrorFrame.pack(side=RIGHT)
-        ErrorLabel = Label(ErrorFrame, text="ERROR: One checbox must be checked\n User was not added", fg='black', justify=LEFT)
+        ErrorLabel = Label(ErrorFrame, text="ERROR: One checbox must be checked\n User was not added", fg='black',
+                           justify=LEFT)
         ErrorLabel.pack(side=TOP)
+        new_img = PhotoImage(file='homer.gif')
+        backlabel.configure(image=new_img)
+        backlabel.image = new_img
         clear_fields()
         return
 
@@ -105,9 +133,11 @@ def add_user(event):
         ErrorFrame.pack(side=RIGHT)
         ErrorLabel = Label(ErrorFrame, text="ERROR: IP incorrect\n User was not added", fg='black', justify=LEFT)
         ErrorLabel.pack(side=TOP)
+        new_img = PhotoImage(file='homer.gif')
+        backlabel.configure(image=new_img)
+        backlabel.image = new_img
         clear_fields()
         return
-
 
 
 root = Tk()
@@ -115,14 +145,14 @@ root = Tk()
 imageframe = Frame(root)
 imageframe.pack(side=TOP)
 imgPath = r"hsk.gif"
-photo = PhotoImage(file = imgPath)
-backlabel = Label(imageframe, image = photo, padx=0, pady=0)
+photo = PhotoImage(file=imgPath)
+backlabel = Label(imageframe, image=photo, padx=0, pady=0)
 backlabel.pack(side=LEFT)
 
 ErrorFrame = Frame(root)
 ErrorFrame.pack(side=RIGHT)
 DATAFrame = Frame(root)
-DATAFrame.pack(side=LEFT, fill = BOTH)
+DATAFrame.pack(side=LEFT, fill=BOTH)
 
 RO_var = IntVar()
 WO_var = IntVar()
