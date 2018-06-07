@@ -21,14 +21,14 @@ class Database(object):
         self.database_instence.execute("DELETE FROM " + table + " WHERE " + column + " == " + column_value + ";")
         self.conn.commit()
 
+    def get_by_column(self, table, column, column_value):
+        return self.database_instence.execute("select * FROM " + table + " WHERE " + column + " == " + column_value + ";")
+
     def Display_all(self, table):
         self.database_instence.execute("SELECT * FROM " + table)
         data = self.database_instence.fetchone()
         return data
 
-    def check_if_there(self, table, column, value):
-         x = self.database_instence.execute("SELECT IP from Users where EXISTS ( SELECT 1 FROM %s WHERE %s == '%s')" %(table, column, value))
-         return x
 
 # example
 
