@@ -2,7 +2,7 @@
 import socket
 import subprocess
 
-SERVER_IP = ''
+SERVER_IP = '192.168.2.157'
 SERVER_PORT = 5555
 
 def main():

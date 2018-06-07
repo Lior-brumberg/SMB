@@ -61,7 +61,7 @@ to_hex = lambda x: "".join((hex(ord(c))[2:].zfill(2) for c in x))
 
 def get_server_from_letter(letter):
     output = subprocess.check_output(['net', 'use'], shell=True)
-    output = ''.join(st.split())
+    output = ''.join(output.split())
     st = output.index(letter)
     output = output[st+4:]
     end = output.index('\\')
@@ -140,13 +140,13 @@ def main(argv):
             if not os.path.exists(dir_letter):
                 print 'No such directory found.'
                 sys.exit()
-            elif dir_path.startswith('C:'):
+            elif dir_letter.startswith('C:'):
                 print 'Not a shared directory.'
                 sys.exit()
 
     server = get_server_from_letter(dir_letter)
     SMBserver.init_server()
-    thread.start_new_thread(listen_to_sockets, (server))
+    thread.start_new_thread(SMBserver.listen_to_sockets, (server, 2))
     logging.basicConfig(filename='smb.log', level=logging.DEBUG)
     sniff(count=0, lfilter=filter_smb, store=0, prn=wrapper(server))
 
