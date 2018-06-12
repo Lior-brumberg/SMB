@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
-from scapy.all import *
 import logging
+with open('smb.log', 'w'):
+    pass
+logging.basicConfig(filename='smb.log', level=logging.DEBUG)
+
+
+from scapy.all import *
 import smb_commands
 import subprocess
 import sys
@@ -9,29 +14,31 @@ import os
 import SMBserver
 import thread
 
-COMMAND_BUFFER = 12
-COMMAND_SIZE = 2
+USAGE = 'USAGE: sniffSMB.py -p <shared_dir_letter>'
 
-FLAGS_BUFFER = 16
-FLAGS_SIZE = 4
+COMMAND_BUFFER = 12 * 2
+COMMAND_SIZE = 2 * 2
 
-NEXT_COMMAND_BUFFER = 20
-NEXT_COMMAND_SIZE = 4
+FLAGS_BUFFER = 16 * 2
+FLAGS_SIZE = 4 * 2
 
-ASYNC_FLAG_BUFFER = 1
+NEXT_COMMAND_BUFFER = 20 * 2
+NEXT_COMMAND_SIZE = 4 * 2
 
-SMB_HEADER_BUFFER = 64
-SESSION_SETUP_BUFFER = 24
+ASYNC_FLAG_BUFFER = 1 * 2
 
-DOMAIN_NAME_LENGTH_SETUP_BUFFER = 28
-DOMAIN_NAME_LENGTH_SETUP_LENGTH = 4
-DOMAIN_NAME_OFFSET_SETUP_BUFFER = 36
-DOMAIN_NAME_OFFSET_SETUP_LENGTH = 8
+SMB_HEADER_BUFFER = 64 * 2
+SESSION_SETUP_BUFFER = 24 * 2
 
-USERNAME_LENGTH_SETUP_BUFFER = 44
-USERNAME_LENGTH_SETUP_LENGTH = 4
-USERNAME_OFFSET_SETUP_BUFFER = 52
-USERNAME_OFFSET_SETUP_LENGTH = 8
+DOMAIN_NAME_LENGTH_SETUP_BUFFER = 28 * 2
+DOMAIN_NAME_LENGTH_SETUP_LENGTH = 4 * 2
+DOMAIN_NAME_OFFSET_SETUP_BUFFER = 36 * 2
+DOMAIN_NAME_OFFSET_SETUP_LENGTH = 8 * 2
+
+USERNAME_LENGTH_SETUP_BUFFER = 44 * 2
+USERNAME_LENGTH_SETUP_LENGTH = 4 * 2
+USERNAME_OFFSET_SETUP_BUFFER = 52 * 2
+USERNAME_OFFSET_SETUP_LENGTH = 8 * 2
 
 COMMANDS_DICT = {
     '0000': 'negotiate',
@@ -59,6 +66,14 @@ COMMANDS_DICT = {
 to_hex = lambda x: "".join((hex(ord(c))[2:].zfill(2) for c in x))
 
 
+def swap_endian(l):
+    swapped = []
+    for i in range(0, len(l), 2):
+        swapped.insert(0, l[i:i+2])
+
+    return ''.join(swapped)
+
+
 def get_server_from_letter(letter):
     output = subprocess.check_output(['net', 'use'], shell=True)
     output = ''.join(output.split())
@@ -66,6 +81,7 @@ def get_server_from_letter(letter):
     output = output[st+4:]
     end = output.index('\\')
     server = output[:end]
+    logging.debug("Server found: " + server)
     return server
 
 
@@ -76,16 +92,20 @@ def filter_smb(pkt):
     try:
         raw_string = str(pkt[Raw])
         hex_s = to_hex(raw_string)
-        return hex_s.startswith('fe534d42')
+        return 'fe534d42' in hex_s
 
     except IndexError:
         return False
+
 
 def wrapper(server):
     def packet_handler(pkt):
         raw_string = str(pkt[Raw])
         hex_s = to_hex(raw_string)
+        hex_s = hex_s[hex_s.index('fe534d42'):]
+        logging.debug('SMB Packet: ' + hex_s)
         command = hex_s[COMMAND_BUFFER:COMMAND_BUFFER + COMMAND_SIZE]
+        command = swap_endian(command)
         command = COMMANDS_DICT[command]
         logging.debug(command)
         
@@ -100,6 +120,7 @@ def wrapper(server):
             return
 
         args = [pkt]
+        logging.debug("Command is: " + command)
         try:
             toClose = getattr(smb_commands, command)(*args)
             if toClose:
@@ -117,42 +138,46 @@ def main(argv):
     """
     Add Documentation here
     """
+    logging.debug("Starting...")
     dir_letter = ''
+
     try:
         opts, arguments = getopt.getopt(argv, "hp:")
     except getopt.GetoptError:
-        print 'Usage: sniffSMB.py -p <shared_dir_letter>'
+        print USAGE
         sys.exit(2)
 
     if not opts:
-        print 'Usage: sniffSMB.py -p <shared_dir_letter>'
+        print USAGE
         sys.exit()
 
     for opt, arg in opts:
         if opt == '-h':
-            print 'Usage: sniffSMB.py -p <shared_dir_letter>'
+            print USAGE
             sys.exit()
         elif opt == '-p':
             dir_letter = arg
+            logging.debug("Network Drive prompted: " + dir_letter)
             if ':' not in dir_letter:
                 dir_letter += ':'
                 
             if not os.path.exists(dir_letter):
                 print 'No such directory found.'
+                logging.debug("No network drive {}".format(dir_letter))
                 sys.exit()
             elif dir_letter.startswith('C:'):
                 print 'Not a shared directory.'
+                logging.debug("C: is not a network drive")
                 sys.exit()
 
     server = get_server_from_letter(dir_letter)
     SMBserver.init_server()
     thread.start_new_thread(SMBserver.listen_to_sockets, (server, 2))
-    logging.basicConfig(filename='smb.log', level=logging.DEBUG)
     sniff(count=0, lfilter=filter_smb, store=0, prn=wrapper(server))
 
 if __name__ == '__main__':
     if len(sys.argv) < 2 or len(sys.argv) > 3:
-        print "Usage: sniffSMB.py -p <shared_dir_letter>"
+        print USAGE
         sys.exit()
     main(sys.argv[1:])
 

@@ -2,10 +2,13 @@ from database import Database
 from Tkinter import *
 import sqlite3
 import tkMessageBox
+from main_screen import main_screen1
 
 
-global User_database
-global IPentry
+def RUN(self):
+    self.root.resizable(width=False, height=False)
+    self.root.mainloop()
+
 
 try:
     User_database = Database("FAKE_DRIVB_DB")
@@ -14,9 +17,9 @@ except sqlite3.OperationalError:
     pass
 
 
-def input_new():
+def input_new(self):
     User_database.delete_by_column("Users", "IP", IPentry.get())
-    add_user(event=1)
+    self.add_user(event=1)
 
 
 def check_ip(ip):
@@ -144,8 +147,7 @@ def add_user(event):
         return
 
 
-root = Tk()
-
+root = Toplevel(main_screen1)
 imageframe = Frame(root)
 imageframe.pack(side=TOP)
 imgPath = r"hsk.gif"
@@ -184,4 +186,3 @@ SubmitButton.bind("<Button-1>", add_user)
 SubmitButton.grid(row=3, column=0, columnspan=2)
 
 root.resizable(width=False, height=False)
-root.mainloop()

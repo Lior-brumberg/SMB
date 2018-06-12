@@ -26,7 +26,7 @@ class Database(object):
 
     def Display_all(self, table):
         self.database_instence.execute("SELECT * FROM " + table)
-        data = self.database_instence.fetchone()
+        data = self.database_instence.fetch()
         return data
 
 
