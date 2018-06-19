@@ -1,19 +1,21 @@
 # -*- coding: utf-8 -*-
 from scapy.all import *
 from database import Database
+import unicodedata
 
-SMB_HEADER_BUFFER = 64
-SESSION_SETUP_BUFFER = 24
 
-DOMAIN_NAME_LENGTH_SETUP_BUFFER = 28
-DOMAIN_NAME_LENGTH_SETUP_LENGTH = 4
-DOMAIN_NAME_OFFSET_SETUP_BUFFER = 36
-DOMAIN_NAME_OFFSET_SETUP_LENGTH = 8
+SMB_HEADER_BUFFER = 64 * 2
+SESSION_SETUP_BUFFER = 24 * 2
 
-USERNAME_LENGTH_SETUP_BUFFER = 44
-USERNAME_LENGTH_SETUP_LENGTH = 4
-USERNAME_OFFSET_SETUP_BUFFER = 52
-USERNAME_OFFSET_SETUP_LENGTH = 8
+DOMAIN_NAME_LENGTH_SETUP_BUFFER = 28 * 2
+DOMAIN_NAME_LENGTH_SETUP_LENGTH = 4 * 2
+DOMAIN_NAME_OFFSET_SETUP_BUFFER = 36 * 2
+DOMAIN_NAME_OFFSET_SETUP_LENGTH = 8 * 2
+
+USERNAME_LENGTH_SETUP_BUFFER = 44 * 2
+USERNAME_LENGTH_SETUP_LENGTH = 4 * 2
+USERNAME_OFFSET_SETUP_BUFFER = 52 * 2
+USERNAME_OFFSET_SETUP_LENGTH = 8 * 2
 
 CREATE_FLAGS_BUFFER = 24
 CREATE_FLAGS_SIZE = 4
@@ -29,7 +31,7 @@ def get_authorization(ip):
     db = Database("FAKE_DRIVB_DB")
     data = db.Display_all('Users')
     for row in data:
-        if ip == row[0]:
+        if ip == row[0].encode('utf-8'):
             return row[1]
     print ip + "isn\'t in database. Inserting to database..."
     db.insert_data("Users", "IP, Authorization", "\'" + ip + "\', \'" + "-1" + "\'")
@@ -50,7 +52,7 @@ def create(pkt):
     raw_string = str(pkt[Raw])
     hex_s = to_hex(raw_string)
     hex_s = swap_endian(hex_s)
-    bin_s = bin(int(hex_s, 16))[2:].zfill(4*len(hex_s))
+    bin_s = bin(int(hex_s, 16))[2:].zfill(4 * len(hex_s))
     if auth == 3:
         return False
     else:
@@ -86,6 +88,7 @@ def write(pkt):
         return ipsrc
     else:
         return False
+
 
 def session_setup(pkt):
     raw_string = str(pkt[Raw])

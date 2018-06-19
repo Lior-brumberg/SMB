@@ -4,7 +4,13 @@ from database import Database
 from Tkinter import *
 import sqlite3
 import tkMessageBox
+import subprocess
 main_screen1 = Tk()
+
+
+def RUN(event):
+    subprocess.call(['python', 'main.py'])
+
 
 def ADD(event):
     execfile('Sighnup.py')
@@ -17,7 +23,7 @@ def main():
     start_button = Button(main_screen1, text='start', fg='black')
     add_user_button = Button(main_screen1, text='Add User', fg='black')
 
-    # start_button.bind("<Button-1>", )
+    start_button.bind("<Button-1>", RUN)
     add_user_button.bind("<Button-1>", ADD)
 
     path = r'main.gif'
